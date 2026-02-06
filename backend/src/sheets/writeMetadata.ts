@@ -40,14 +40,24 @@ export async function writeMissingRowMetadata() {
             return;
         }
 
-        if (!row[rowIdIndex]) {
-            const copy = [...row];
-            copy[rowIdIndex] = crypto.randomUUID();
-            copy[updatedAtIndex] = Date.now().toString();
+        const needsRowId = !row[rowIdIndex];
+        const needsUpdatedAt = !row[updatedAtIndex];
 
+        if (needsRowId || needsUpdatedAt) {
             updates.push({
                 range: `${sheetRowIndex}:${sheetRowIndex}`,
-                values: [copy],
+                values: [
+                    (() => {
+                        const copy = [...row];
+                        if (needsRowId) {
+                            copy[rowIdIndex] = crypto.randomUUID();
+                        }
+                        if (needsUpdatedAt) {
+                            copy[updatedAtIndex] = Date.now().toString();
+                        }
+                        return copy;
+                    })(),
+                ],
             });
         }
     });

@@ -14,12 +14,8 @@ export function normalizeSheetRows(values: string[][]): CanonicalRow[] {
     const updatedAtIndex = headers.indexOf(UPDATED_AT_COL);
 
     return dataRows
-        .filter((row) => {
-            return (
-                !row.includes(ROW_ID_COL) &&
-                !row.includes(UPDATED_AT_COL)
-            );
-        })
+        // only skip fully empty rows
+        .filter((row) => row.some((cell) => cell !== ""))
         .map((row) => {
             const data: Record<string, string> = {};
 
@@ -37,7 +33,7 @@ export function normalizeSheetRows(values: string[][]): CanonicalRow[] {
             const updated_at =
                 updatedAtIndex >= 0
                     ? Number(row[updatedAtIndex])
-                    : Date.now();
+                    : 0; // IMPORTANT: do NOT auto-Date.now()
 
             return {
                 row_id,
@@ -46,3 +42,4 @@ export function normalizeSheetRows(values: string[][]): CanonicalRow[] {
             };
         });
 }
+

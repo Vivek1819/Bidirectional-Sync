@@ -10,6 +10,7 @@ import { diffRows } from "./sync/diff";
 import { applySheetToDb } from "./sync/applySheetToDb";
 import { bumpSheetUpdatedAtIfNeeded } from "./sync/bumpSheetUpdatedAt";
 import { applyDbDeletes } from "./sync/applyDeletes";
+import { runSync } from "./sync/runSync";
 
 const app = express();
 app.use(express.json());
@@ -26,6 +27,11 @@ app.get("/health", async (_, res) => {
 app.listen(env.port, () => {
   console.log(`Backend running on port ${env.port}`);
 });
+
+setInterval(() => {
+  runSync().catch(console.error);
+}, 5_000);
+
 
 app.get("/sheet", async (_, res) => {
   try {
