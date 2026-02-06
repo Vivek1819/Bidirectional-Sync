@@ -7,6 +7,8 @@ import { applyDbDeletes } from "./applyDeletes";
 import { bumpSheetUpdatedAtIfNeeded } from "./bumpSheetUpdatedAt";
 import { ensureMetadataColumns } from "../sheets/metadata";
 import { writeMissingRowMetadata } from "../sheets/writeMetadata";
+import { hideMetadataColumns } from "../sheets/hideMetadata";
+import { reorderMetadataColumns } from "../sheets/reorderMetadata";
 
 let isRunning = false;
 
@@ -18,7 +20,9 @@ export async function runSync() {
 
     await ensureMetadataColumns();
     await writeMissingRowMetadata();
-    
+    await hideMetadataColumns();
+    await reorderMetadataColumns();
+
     // Phase 1: read + detect
     const raw1 = await readSheet();
     const sheet1 = normalizeSheetRows(raw1);
