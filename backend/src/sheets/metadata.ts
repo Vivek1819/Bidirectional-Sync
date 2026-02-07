@@ -1,40 +1,53 @@
 import { getSheetsClient } from "./client";
 import { env } from "../config/env";
 
-const ROW_ID_COL = "__row_id";
-const UPDATED_AT_COL = "__updated_at";
+const METADATA_COLUMNS = [
+  "__row_id",
+  "__updated_at",
+  "__deleted_at",
+];
 
 export async function ensureMetadataColumns() {
   const sheets = getSheetsClient();
 
-  // Read current header row
-  const response = await sheets.spreadsheets.values.get({
+  // 1. Read header
+  const headerRes = await sheets.spreadsheets.values.get({
     spreadsheetId: env.google.sheetId,
     range: "A1:Z1",
   });
 
-  const headers = response.data.values?.[0] ?? [];
+  const headers = headerRes.data.values?.[0] ?? [];
+  let newHeaders = [...headers];
 
-  const newHeaders = [...headers];
-
-  if (!headers.includes(ROW_ID_COL)) {
-    newHeaders.push(ROW_ID_COL);
+  for (const col of METADATA_COLUMNS) {
+    if (!newHeaders.includes(col)) {
+      newHeaders.push(col);
+    }
   }
 
-  if (!headers.includes(UPDATED_AT_COL)) {
-    newHeaders.push(UPDATED_AT_COL);
+  // 2. Update header if needed
+  if (newHeaders.length !== headers.length) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: env.google.sheetId,
+      range: "A1",
+      valueInputOption: "RAW",
+      requestBody: { values: [newHeaders] },
+    });
   }
 
-  // If nothing changed, exit
-  if (newHeaders.length === headers.length) return;
+  // 3. 🔥 FORCE MATERIALIZATION OF deleted_at COLUMN
+  const deletedAtIndex = newHeaders.indexOf("__deleted_at");
+  if (deletedAtIndex === -1) return;
 
-  // Rewrite header row explicitly
+  const colLetter = String.fromCharCode(65 + deletedAtIndex);
+
+  // Fill first 1000 rows with empty string
   await sheets.spreadsheets.values.update({
     spreadsheetId: env.google.sheetId,
-    range: "A1",
+    range: `${colLetter}2:${colLetter}1000`,
     valueInputOption: "RAW",
     requestBody: {
-      values: [newHeaders],
+      values: Array.from({ length: 999 }, () => [""]),
     },
   });
 }

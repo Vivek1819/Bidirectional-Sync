@@ -14,6 +14,7 @@ import { runSync } from "./sync/runSync";
 import dbRoutes from "./routes/db";
 import { reorderMetadataColumns } from "./sheets/reorderMetadata";
 import { hideMetadataColumns } from "./sheets/hideMetadata";
+import { cleanupDeletedRows } from "./db/cleanupDeletedRows";
 
 const app = express();
 app.use(express.json());
@@ -100,3 +101,11 @@ app.post("/sync/sheet-to-db", async (_, res) => {
     res.status(500).json({ error: "Sheet → DB sync failed" });
   }
 });
+
+setInterval(async () => {
+  try {
+    await cleanupDeletedRows();
+  } catch (err) {
+    console.error("[cleanup] failed", err);
+  }
+}, 5 * 60 * 1000);

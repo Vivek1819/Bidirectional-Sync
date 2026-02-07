@@ -2,7 +2,7 @@ import { sheets_v4 } from "googleapis";
 import { getSheetsClient } from "./client";
 import { env } from "../config/env";
 
-const METADATA_HEADERS = ["__row_id", "__updated_at"];
+const METADATA_HEADERS = ["__row_id", "__updated_at", "__deleted_at"];
 
 export async function hideMetadataColumns() {
     const sheets = getSheetsClient();
