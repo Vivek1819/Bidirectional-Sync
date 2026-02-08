@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { insertRow, updateCell, softDeleteRow } from "../db/rows";
+import { insertRow, updateCell, softDeleteRow, getAllRows } from "../db/rows";
 
 const router = Router();
 
@@ -45,5 +45,14 @@ router.delete("/rows/:row_id", async (req, res) => {
     }
 });
 
+// Get all rows
+router.get("/rows", async (_req, res) => {
+  try {
+    const rows = await getAllRows();
+    res.json(rows);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 export default router;

@@ -1,24 +1,22 @@
 import { useState } from "react";
-import { api } from "../api/client";
 
-export default function SyncControls() {
-  const [loading, setLoading] = useState(false);
+type SyncControlsProps = {
+  onSync: () => Promise<void>;
+  loading: boolean;
+};
+
+export default function SyncControls({ onSync, loading }: SyncControlsProps) {
   const [status, setStatus] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<number | null>(null);
 
-  async function runSync() {
+  async function run() {
     try {
-      setLoading(true);
       setStatus(null);
-
-      await api("/sync", { method: "POST" });
-
+      await onSync();
       setLastSync(Date.now());
       setStatus("Sync completed successfully");
     } catch (err: any) {
       setStatus(err.message || "Sync failed");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -33,7 +31,7 @@ export default function SyncControls() {
     >
       <h2>Sync Controls</h2>
 
-      <button onClick={runSync} disabled={loading}>
+      <button onClick={run} disabled={loading}>
         {loading ? "Running sync..." : "Run Sync Now"}
       </button>
 

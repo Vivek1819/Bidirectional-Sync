@@ -1,20 +1,44 @@
-const API_BASE_URL = "http://localhost:3001";
+const BASE_URL = "http://localhost:3001";
 
-export async function api<T>(
-  path: string,
-  options?: RequestInit
-): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-    },
-    ...options,
+export async function fetchRows() {
+  const res = await fetch(`${BASE_URL}/db/rows`);
+  if (!res.ok) throw new Error("Failed to fetch rows");
+  return res.json();
+}
+
+export async function runSync() {
+  const res = await fetch(`${BASE_URL}/sync`, {
+    method: "POST",
   });
+  if (!res.ok) throw new Error("Sync failed");
+  return res.json();
+}
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || "API request failed");
-  }
+export async function insertRow(data: Record<string, string>) {
+  const res = await fetch(`${BASE_URL}/db/rows`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data }),
+  });
+  return res.json();
+}
 
+export async function updateCell(
+  row_id: string,
+  column: string,
+  value: string
+) {
+  const res = await fetch(`${BASE_URL}/db/rows/${row_id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ column, value }),
+  });
+  return res.json();
+}
+
+export async function deleteRow(row_id: string) {
+  const res = await fetch(`${BASE_URL}/db/rows/${row_id}`, {
+    method: "DELETE",
+  });
   return res.json();
 }
