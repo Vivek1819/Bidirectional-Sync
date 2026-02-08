@@ -41,12 +41,29 @@ export async function runSync() {
     // ─────────────
     // APPLY
     // ─────────────
-    await applySheetToDb(diff);        // Sheet → DB
-    await applyDbToSheet(diff.toUpdateSheet); // DB → Sheet
 
-    // Deletes are handled ONLY via deleted_at
-    await applyDbDeletesToSheet(await getAllRows());
+    // 1️⃣ Sheet → DB
+    await applySheetToDb(diff);
+
+    // 2️⃣ DB → Sheet INSERT (🔥 THIS IS WHAT WAS MISSING)
+    const dbRowsAfter = await getAllRows();
+    const sheetRowsFinal = normalizeSheetRows(await readSheet());
+
+    const rowsToInsertIntoSheet = dbRowsAfter.filter(
+      dbRow =>
+        !dbRow.deleted_at &&
+        !sheetRowsFinal.some(sheetRow => sheetRow.row_id === dbRow.row_id)
+    );
+
+    await applyDbInsertToSheet(rowsToInsertIntoSheet);
+
+    // 3️⃣ DB → Sheet UPDATE
+    await applyDbToSheet(diff.toUpdateSheet);
+
+    // 4️⃣ DB → Sheet DELETE / VISIBILITY
+    await applyDbDeletesToSheet(dbRowsAfter);
     await hideDeletedRowsInSheet();
+
 
   } finally {
     isRunning = false;
