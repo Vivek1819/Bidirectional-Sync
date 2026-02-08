@@ -22,39 +22,32 @@ export async function runSync() {
     await ensureMetadataColumns();
     await writeMissingRowMetadata();
 
-    // ─────────────────────────────────
-    // PHASE 1: Sheet → DB
-    // ─────────────────────────────────
+    // ─────────────
+    // READ PHASE
+    // ─────────────
+    const sheetRows = normalizeSheetRows(await readSheet());
+    const dbRows = await getAllRows();
 
-    const rawSheetA = await readSheet();
-    const sheetRowsA = normalizeSheetRows(rawSheetA);
-    const dbRowsA = await getAllRows();
+    // Ensure sheet edits get timestamps
+    await bumpSheetUpdatedAtIfNeeded(sheetRows, dbRows);
 
-    await bumpSheetUpdatedAtIfNeeded(sheetRowsA, dbRowsA);
+    const sheetRowsAfter = normalizeSheetRows(await readSheet());
 
-    const rawSheetB = await readSheet();          // AFTER bump
-    const sheetRowsB = normalizeSheetRows(rawSheetB);
+    // ─────────────
+    // DIFF
+    // ─────────────
+    const diff = diffRows(sheetRowsAfter, dbRows);
 
-    const diffSheetToDb = diffRows(sheetRowsB, dbRowsA);
+    // ─────────────
+    // APPLY
+    // ─────────────
+    await applySheetToDb(diff);        // Sheet → DB
+    await applyDbToSheet(diff.toUpdateSheet); // DB → Sheet
 
-    await applySheetToDb(diffSheetToDb);
-    await applyDbDeletes(diffSheetToDb);
-
-    // ─────────────────────────────────
-    // PHASE 2: DB → Sheet
-    // ─────────────────────────────────
-
-    const dbRowsB = await getAllRows();            // AFTER DB writes
-    const rawSheetC = await readSheet();           // 🚨 MUST RE-READ
-    const sheetRowsC = normalizeSheetRows(rawSheetC);
-
-    const diffDbToSheet = diffRows(sheetRowsC, dbRowsB);
-
-    await applyDbInsertToSheet(diffDbToSheet.toInsertSheet);
-    await applyDbToSheet(diffDbToSheet.toUpdateSheet);
-    await applyDbDeletesToSheet(dbRowsB);
-
+    // Deletes are handled ONLY via deleted_at
+    await applyDbDeletesToSheet(await getAllRows());
     await hideDeletedRowsInSheet();
+
   } finally {
     isRunning = false;
   }

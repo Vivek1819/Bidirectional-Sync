@@ -18,10 +18,10 @@ export function diffRows(
 
   const toInsert: CanonicalRow[] = [];
   const toUpdate: CanonicalRow[] = [];
-  const toDelete: CanonicalRow[] = [];
   const toUpdateSheet: CanonicalRow[] = [];
+  const toInsertSheet: CanonicalRow[] = [];
 
-  // 1️⃣ Sheet → DB (insert / update)
+  // Sheet → DB
   for (const sheetRow of sheetRows) {
     const dbRow = dbMap.get(sheetRow.row_id);
 
@@ -37,20 +37,19 @@ export function diffRows(
     }
   }
 
-  // 2️⃣ Sheet delete → DB delete
+  // DB → Sheet (THIS WAS MISSING)
   for (const dbRow of dbRows) {
-    if (!sheetMap.has(dbRow.row_id)) {
-      toDelete.push(dbRow);
+    if (!sheetMap.has(dbRow.row_id) && !dbRow.deleted_at) {
+      toInsertSheet.push(dbRow);
     }
   }
 
   return {
     toInsert,
     toUpdate,
-    toDelete,
+    toDelete: [],
     toUpdateSheet,
-    toInsertSheet: [],   // no longer used
-    toDeleteSheet: [],   // no longer used
+    toInsertSheet,
+    toDeleteSheet: [],
   };
 }
-
