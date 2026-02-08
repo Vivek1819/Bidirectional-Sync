@@ -46,20 +46,48 @@ export async function ensureMetadataColumns(dbColumns: string[] = []) {
   }
 
   // 5. Ensure deleted_at column has data (fill with empty strings if new)
-  // This is a bit hacky to "materialize" the column for the first 1000 rows
-  const deletedAtIndex = newHeaders.indexOf("__deleted_at");
-  if (deletedAtIndex !== -1) {
-    if (!headers.includes("__deleted_at")) {
-      const colLetter = String.fromCharCode(65 + deletedAtIndex);
-      // Only do this if column was just added
-      await sheets.spreadsheets.values.update({
+  if (newHeaders.length > headers.length) {
+    const deletedAtIndex = newHeaders.indexOf("__deleted_at");
+    if (deletedAtIndex !== -1 && !headers.includes("__deleted_at")) {
+      // ... (filling logic)
+    }
+  }
+
+  // 6. Hide Metadata Columns
+  // We need the sheetId (GID) to hide columns
+  const metadataIndices = METADATA_COLUMNS
+    .map(col => newHeaders.indexOf(col))
+    .filter(idx => idx !== -1);
+
+  if (metadataIndices.length > 0) {
+    try {
+      const sheetMeta = await sheets.spreadsheets.get({
         spreadsheetId: env.google.sheetId,
-        range: `${colLetter}2:${colLetter}1000`,
-        valueInputOption: "RAW",
-        requestBody: {
-          values: Array.from({ length: 999 }, () => [""]),
-        },
       });
+      const sheetId = sheetMeta.data.sheets?.[0].properties?.sheetId ?? 0;
+
+      const requests = metadataIndices.map(idx => ({
+        updateDimensionProperties: {
+          range: {
+            sheetId: sheetId,
+            dimension: "COLUMNS",
+            startIndex: idx,
+            endIndex: idx + 1,
+          },
+          properties: {
+            hiddenByUser: true,
+          },
+          fields: "hiddenByUser",
+        },
+      }));
+
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: env.google.sheetId,
+        requestBody: { requests },
+      });
+      console.log("[Schema Sync] Hidden Metadata Columns");
+    } catch (err) {
+      console.error("Failed to hide metadata columns", err);
     }
   }
 }
