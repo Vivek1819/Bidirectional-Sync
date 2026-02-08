@@ -18,40 +18,45 @@ export async function runSync() {
   if (isRunning) return;
   isRunning = true;
 
-  await ensureMetadataColumns();
-  await writeMissingRowMetadata();
-
-
   try {
-    // 1️⃣ Read current state
-    const rawSheet = await readSheet();
-    const sheetRows = normalizeSheetRows(rawSheet);
-    const dbRowsBefore = await getAllRows();
+    await ensureMetadataColumns();
+    await writeMissingRowMetadata();
 
-    // 1.5️⃣ Bump updated_at for changed rows (CRITICAL for sheet→DB sync!)
-    await bumpSheetUpdatedAtIfNeeded(sheetRows, dbRowsBefore);
+    // ─────────────────────────────────
+    // PHASE 1: Sheet → DB
+    // ─────────────────────────────────
 
-    // 1.6️⃣ Re-read sheet after bumping timestamps
-    const rawSheet2 = await readSheet();
-    const sheetRows2 = normalizeSheetRows(rawSheet2);
+    const rawSheetA = await readSheet();
+    const sheetRowsA = normalizeSheetRows(rawSheetA);
+    const dbRowsA = await getAllRows();
 
-    // 2️⃣ Diff
-    const diff = diffRows(sheetRows2, dbRowsBefore);
+    await bumpSheetUpdatedAtIfNeeded(sheetRowsA, dbRowsA);
 
-    // 3️⃣ Sheet → DB
-    await applySheetToDb(diff);
-    await applyDbDeletes(diff);
+    const rawSheetB = await readSheet();          // AFTER bump
+    const sheetRowsB = normalizeSheetRows(rawSheetB);
 
-    // 4️⃣ RE-READ DB (CRITICAL)
-    const dbRowsAfter = await getAllRows();
+    const diffSheetToDb = diffRows(sheetRowsB, dbRowsA);
 
-    // 5️⃣ DB → Sheet
-    await applyDbInsertToSheet(diff.toInsertSheet);
-    await applyDbToSheet(diff.toUpdateSheet);
-    await applyDbDeletesToSheet(dbRowsAfter);
+    await applySheetToDb(diffSheetToDb);
+    await applyDbDeletes(diffSheetToDb);
+
+    // ─────────────────────────────────
+    // PHASE 2: DB → Sheet
+    // ─────────────────────────────────
+
+    const dbRowsB = await getAllRows();            // AFTER DB writes
+    const rawSheetC = await readSheet();           // 🚨 MUST RE-READ
+    const sheetRowsC = normalizeSheetRows(rawSheetC);
+
+    const diffDbToSheet = diffRows(sheetRowsC, dbRowsB);
+
+    await applyDbInsertToSheet(diffDbToSheet.toInsertSheet);
+    await applyDbToSheet(diffDbToSheet.toUpdateSheet);
+    await applyDbDeletesToSheet(dbRowsB);
 
     await hideDeletedRowsInSheet();
   } finally {
     isRunning = false;
   }
 }
+

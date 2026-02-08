@@ -42,9 +42,13 @@ export async function bumpSheetUpdatedAtIfNeeded(
         const dbRow = dbMap.get(sheetRow.row_id);
         if (!dbRow) return;
 
+        // Only bump sheet's timestamp if:
+        // 1. Data differs (sheet was manually edited)
+        // 2. Sheet's timestamp is NEWER (indicating a sheet edit we need to process)
+        // If DB is newer, do NOT bump - let DB→Sheet sync overwrite sheet
         if (
             !isRowDataEqual(sheetRow, dbRow) &&
-            sheetRow.updated_at <= dbRow.updated_at
+            sheetRow.updated_at >= dbRow.updated_at
         ) {
             const sheetRowIndex = idx + 2;
 
