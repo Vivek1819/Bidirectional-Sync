@@ -47,6 +47,13 @@ function App() {
 
   useEffect(() => {
     loadRows();
+
+    // Poll for updates every 5 seconds
+    const interval = setInterval(() => {
+      loadRows();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const activeRows = rows.filter((r) => !r.deleted_at);
@@ -54,7 +61,10 @@ function App() {
   return (
     <div className="app-container">
       <header className="dashboard-header">
-        <h1 className="dashboard-title">NEXUS SYNC</h1>
+        <h1 className="dashboard-title">
+          NEXUS SYNC
+          <span className="live-badge">LIVE</span>
+        </h1>
         <div className="cluster-subtitle">Data/Sheet Bridge v2.0</div>
       </header>
 

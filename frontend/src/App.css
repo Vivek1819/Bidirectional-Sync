@@ -23,6 +23,36 @@
   color: transparent;
   text-shadow: 0 0 30px rgba(188, 19, 254, 0.2);
   margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.live-badge {
+  font-size: 0.8rem;
+  background: rgba(10, 255, 104, 0.1);
+  color: var(--neon-green);
+  border: 1px solid var(--neon-green);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 1px;
+  animation: pulse-green 2s infinite;
+  vertical-align: middle;
+}
+
+@keyframes pulse-green {
+  0% {
+    box-shadow: 0 0 0 0 rgba(10, 255, 104, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px rgba(10, 255, 104, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(10, 255, 104, 0);
+  }
 }
 
 .cluster-subtitle {
@@ -90,6 +120,14 @@
   box-shadow: 0 0 15px rgba(10, 255, 104, 0.2);
 }
 
+.btn-add:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: var(--glass-border);
+  color: var(--text-muted);
+  box-shadow: none;
+}
+
 .plus-icon {
   font-size: 1.2rem;
   line-height: 0.5;
@@ -99,5 +137,6 @@
 @media (max-width: 768px) {
   .dashboard-title {
     font-size: 2rem;
+    flex-direction: column;
   }
 }
