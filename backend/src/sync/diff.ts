@@ -13,20 +13,15 @@ export function diffRows(
   sheetRows: CanonicalRow[],
   dbRows: CanonicalRow[]
 ): DiffResult {
-  const dbMap = new Map<string, CanonicalRow>();
-  dbRows.forEach((r) => dbMap.set(r.row_id, r));
-
-  const sheetMap = new Map<string, CanonicalRow>();
-  sheetRows.forEach((r) => sheetMap.set(r.row_id, r));
+  const dbMap = new Map(dbRows.map(r => [r.row_id, r]));
+  const sheetMap = new Map(sheetRows.map(r => [r.row_id, r]));
 
   const toInsert: CanonicalRow[] = [];
   const toUpdate: CanonicalRow[] = [];
   const toDelete: CanonicalRow[] = [];
   const toUpdateSheet: CanonicalRow[] = [];
-  const toInsertSheet: CanonicalRow[] = [];
-  const toDeleteSheet: CanonicalRow[] = [];
 
-  // Sheet → DB (insert / update)
+  // 1️⃣ Sheet → DB (insert / update)
   for (const sheetRow of sheetRows) {
     const dbRow = dbMap.get(sheetRow.row_id);
 
@@ -36,38 +31,26 @@ export function diffRows(
     }
 
     if (sheetRow.updated_at > dbRow.updated_at) {
-      toUpdate.push(sheetRow); // Sheet → DB
+      toUpdate.push(sheetRow);
     } else if (dbRow.updated_at > sheetRow.updated_at) {
-      toUpdateSheet.push(dbRow); // DB → Sheet
+      toUpdateSheet.push(dbRow);
     }
   }
 
-  // DB → Sheet (delete)
+  // 2️⃣ Sheet delete → DB delete
   for (const dbRow of dbRows) {
     if (!sheetMap.has(dbRow.row_id)) {
-      toInsertSheet.push(dbRow);
-    }
-  }
-
-  const insertSheetIds = new Set(
-    toInsertSheet.map(r => r.row_id)
-  );
-
-  for (const dbRow of dbRows) {
-    if (
-      !sheetMap.has(dbRow.row_id) &&
-      !insertSheetIds.has(dbRow.row_id)
-    ) {
       toDelete.push(dbRow);
     }
   }
 
-
-  for (const sheetRow of sheetRows) {
-    if (!dbMap.has(sheetRow.row_id)) {
-      toDeleteSheet.push(sheetRow);
-    }
-  }
-
-  return { toInsert, toUpdate, toDelete, toUpdateSheet, toInsertSheet, toDeleteSheet };
+  return {
+    toInsert,
+    toUpdate,
+    toDelete,
+    toUpdateSheet,
+    toInsertSheet: [],   // no longer used
+    toDeleteSheet: [],   // no longer used
+  };
 }
+
